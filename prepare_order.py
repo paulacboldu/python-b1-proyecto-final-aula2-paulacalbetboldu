@@ -101,11 +101,49 @@ f.	Agregar productos: Utilizar la instancia la clase 'Order', del paso c y llama
 
 
 """
-#Write your code here
 from users import *
+from products import *
+from orders import Order
+from util.converter import CashierConverter, CustomerConverter, ProductConverter
+from util.file_manager import CSVFileManager
+from datetime import datetime
+import pandas as pd
 
     
 class PrepareOrder:
- #Write your code here
- pass
+    def run(self):
+        # 1. Llegim els fitxers CSV i els convertim en DataFrames
+        cashier_df = CSVFileManager("data/cashiers.csv").read()
+        customer_df = CSVFileManager("data/customers.csv").read()
+        hamburgers_df = CSVFileManager("data/hamburgers.csv").read()
+        drinks_df = CSVFileManager("data/drinks.csv").read()
+        sodas_df = CSVFileManager("data/sodas.csv").read()
+        happy_meal_df = CSVFileManager("data/happyMeal.csv").read()
 
+        # 2. Convertim els DataFrames en llistes d'objectes
+        cashier = CashierConverter().convert(cashier_df)[0]
+        customer = CustomerConverter().convert(customer_df)[0]
+
+        products = []
+        product_converter = ProductConverter()
+        products += product_converter.convert(hamburgers_df, "hamburger")
+        products += product_converter.convert(drinks_df, "drink")
+        products += product_converter.convert(sodas_df, "soda")
+        products += product_converter.convert(happy_meal_df, "happy_meal")
+
+        # 3. Preparem l'ordre
+        order = Order(cashier, customer)
+        for product in products:
+            order.add(product)
+
+        # 4. Mostrem l'ordre
+        order.show()
+
+        # 5. Guardem la comanda al fitxer CSV
+        order_data = pd.DataFrame({
+            'DNI_Cashier': [order.cashier.dni],
+            'DNI_Customer': [order.customer.dni],
+            'Date_Time': [datetime.now().strftime('%Y-%m-%d %H:%M:%S')],
+            'Total_Price': [order.calculateTotal()]
+        })
+        CSVFileManager("data/orders.csv").write(order_data)
